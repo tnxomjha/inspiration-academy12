@@ -1,0 +1,14 @@
+const mongoose = require('mongoose');
+
+const StepSchema = new mongoose.Schema({
+  stepNo: Number,
+  hint: String,
+  solution: String
+});
+
+const QuestionSchema = new mongoose.Schema({
+  question: String,
+  steps: [StepSchema]
+});
+
+module.exports = mongoose.model('Question', QuestionSchema);
