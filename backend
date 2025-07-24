@@ -1,0 +1,57 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const Question = require('./models/Question');
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+// MongoDB Atlas URI (replace <username>, <password>, <cluster-url>)
+const MONGODB_URI = 'mongodb+srv://<username>:<password>@<cluster-url>/stepwise-maths?retryWrites=true&w=majority';
+mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+
+app.get('/api/seed', async (req, res) => {
+  const count = await Question.countDocuments();
+  if (count === 0) {
+    const q = new Question({
+      question: "Solve 2x + 3 = 9",
+      steps: [
+        { stepNo: 1, hint: "Subtract 3 from both sides", solution: "2x = 6" },
+        { stepNo: 2, hint: "Divide both sides by 2", solution: "x = 3" }
+      ]
+    });
+    await q.save();
+    res.json({ seeded: true });
+  } else {
+    res.json({ seeded: false });
+  }
+});
+
+app.get('/api/questions', async (req, res) => {
+  const questions = await Question.find({});
+  res.json(questions);
+});
+
+app.get('/api/questions/:id', async (req, res) => {
+  const question = await Question.findById(req.params.id);
+  res.json(question);
+});
+
+app.post('/api/questions/:id/check', async (req, res) => {
+  const { stepNo, studentAnswer } = req.body;
+  const question = await Question.findById(req.params.id);
+  const step = question.steps.find(s => s.stepNo === stepNo);
+
+  if (!step) {
+    return res.json({ correct: false, message: "Step not found" });
+  }
+
+  if (step.solution.trim().toLowerCase() === studentAnswer.trim().toLowerCase()) {
+    res.json({ correct: true });
+  } else {
+    res.json({ correct: false, hint: step.hint, solution: step.solution });
+  }
+});
+
+app.listen(5000, () => console.log('Backend running on 5000'));
